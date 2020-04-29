@@ -1,0 +1,29 @@
+## Define shell command line which will be used to run scripts.
+MKSHELL=/bin/bash
+
+%.maf.plink.bed:Q: %.plink.bed
+	echo "[DEBUG] Filtering maf with plink from $prereq"
+	$PLINK2 --bfile $stem.plink \
+	--maf $MAF \
+	--make-bed \
+	--threads $THREADS_PLINK \
+	--out $stem.maf.plink
+	variants_original_vcf=$(grep "variants loaded" $stem.maf.plink.log | cut -f 1 -d " ")
+	variants_filtered_vcf=$(grep "variants remaining" $stem.maf.plink.log | cut -f 1 -d " ")
+	echo "FILE VARIANTS" | tr " " "\t" > $stem.maf.plink.tsv
+	echo "$stem.vcf.gz $variants_original_vcf" | tr " " "\t" >> $stem.maf.plink.tsv
+	echo "$target $variants_filtered_vcf" | tr " " "\t" >> $stem.maf.plink.tsv
+	Rscript --vanilla counter_variants.R $stem.maf.plink.tsv $target \
+	&& rm $stem.plink.*
+
+%.plink.bed:Q: %.vcf.gz
+	echo "[DEBUG] Converting vcf to plink file $prereq"
+	$PLINK2 --vcf $prereq \
+	--keep-allele-order \
+	--const-fid $FAM_ID \
+	--vcf-filter \
+	--vcf-half-call m \
+	--vcf-require-gt \
+	--make-bed \
+	--threads $THREADS_PLINK \
+	--out $stem.plink

@@ -1,0 +1,14 @@
+## Define shell command line which will be used to run scripts.
+MKSHELL=/bin/bash
+
+%.bcftools.vcf:Q: %.vcf.gz
+	echo "[DEBUG] Filtering MAF to $prereq with bcftools"
+	bcftools view \
+		--min-af $MAF \
+		$prereq > $target
+	variants_original_vcf=$(bcftools view -H $prereq | wc -l)
+	variants_filtered_vcf=$(bcftools view -H $target | wc -l)
+	echo "FILE VARIANTS" | tr " " "\t" > $stem.bcftools.tsv
+	echo "$prereq $variants_original_vcf" | tr " " "\t" >> $stem.bcftools.tsv
+	echo "$target $variants_filtered_vcf" | tr " " "\t" >> $stem.bcftools.tsv
+	Rscript --vanilla counter_variants.R $stem.bcftools.tsv $target
